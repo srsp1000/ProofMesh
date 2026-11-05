@@ -17,6 +17,22 @@ export const claimRoutes: FastifyPluginAsync<Partial<AuthMiddlewareDependencies>
       ? createAuthMiddleware(options as AuthMiddlewareDependencies)
       : null;
 
+  const claimsStore = new Map<
+    string,
+    {
+      id: string;
+      conceptId: string;
+      conceptKey: string;
+      versionSequence: number;
+      statement: string;
+      status: string;
+      qualifiers: Record<string, unknown>;
+      validFrom: string | null;
+      validTo: string | null;
+      recordedAt: string;
+    }
+  >();
+
   // Ingestion: submit a claim
   fastify.post('/v1/claims', async (request, reply) => {
     if (authMiddleware) {
@@ -61,16 +77,46 @@ export const claimRoutes: FastifyPluginAsync<Partial<AuthMiddlewareDependencies>
       });
     }
 
-    // Return created claim version DTO
-    return reply.status(201).send({
+    const claimRecord = {
       id: claimId,
+      conceptId: crypto.randomUUID(),
       conceptKey: claimConceptKey,
       versionSequence: 1,
       statement,
       status: 'submitted',
       qualifiers,
+      validFrom: recordedAt,
+      validTo: null,
       recordedAt
-    });
+    };
+    claimsStore.set(claimId, claimRecord);
+
+    // Return created claim version DTO
+    return reply.status(201).send(claimRecord);
+  });
+
+  // Lookup claim by ID
+  fastify.get('/v1/claims/:id', async (request, reply) => {
+    if (authMiddleware) {
+      await authMiddleware.authenticate(request, reply);
+      if (reply.sent) return;
+    }
+
+    const claimId = (request.params as { id: string }).id;
+    const claim = claimsStore.get(claimId);
+
+    if (!claim) {
+      return reply.status(404).send(
+        createProblemDetails({
+          status: 404,
+          code: 'CLAIM_NOT_FOUND',
+          title: 'Claim Not Found',
+          detail: `Claim with ID '${claimId}' was not found.`
+        })
+      );
+    }
+
+    return reply.status(200).send(claim);
   });
 
   // Guarded state transition
@@ -126,6 +172,11 @@ export const claimRoutes: FastifyPluginAsync<Partial<AuthMiddlewareDependencies>
           },
           correlationId: request.context.correlationId
         });
+      }
+
+      const existing = claimsStore.get(claimVersionId);
+      if (existing) {
+        existing.status = targetState;
       }
 
       return reply.status(200).send({

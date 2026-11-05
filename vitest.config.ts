@@ -21,7 +21,9 @@ export default defineConfig({
     alias: {
       '@proofmesh/contracts': path.resolve(__dirname, 'packages/contracts/src'),
       '@proofmesh/domain': path.resolve(__dirname, 'packages/domain/src'),
-      '@proofmesh/db': path.resolve(__dirname, 'packages/db/src')
+      '@proofmesh/db': path.resolve(__dirname, 'packages/db/src'),
+      '@proofmesh/sdk': path.resolve(__dirname, 'packages/sdk/src'),
+      '@proofmesh/mcp-server': path.resolve(__dirname, 'packages/mcp-server/src')
     }
   }
 });

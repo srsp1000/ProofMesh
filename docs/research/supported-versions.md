@@ -88,7 +88,24 @@ By default, ProofMesh applies **`metadata_only`** privacy filtering to all incom
 
 ---
 
-## 5. Deprecation & Sunset Policies
+## 5. Developer SDKs, MCP & Framework Instrumentation (Phase 6)
+
+| Ecosystem / Component      | Minimum Version | Validated Version  | Status     | Capabilities & Constraints                                                   |
+| :------------------------- | :-------------- | :----------------- | :--------- | :--------------------------------------------------------------------------- |
+| **TypeScript SDK**         | Node `>= 20.0`  | Node `v22.20.5`    | **Active** | `@proofmesh/sdk`: `AsyncLocalStorage`, retries, telemetry buffer.            |
+| **Python SDK**             | Python `>=3.10` | Python `3.11.8`    | **Active** | `proofmesh`: `contextvars`, Pydantic v2, sync/async HTTPX, zero drift.       |
+| **Model Context Protocol** | `2024-11-05`    | `2024-11-05`       | **Active** | `@proofmesh/mcp-server`: stdio & HTTP/SSE, 7 narrow governance tools.        |
+| **LangChain (TypeScript)** | `>= 0.2.0`      | `v0.2.x` / `0.3.x` | **Active** | `ProofMeshLangChainCallback`: chain, tool, LLM hooks (`captured`).           |
+| **LangChain (Python)**     | `>= 0.2.0`      | `v0.2.x` / `0.3.x` | **Active** | `ProofMeshLangChainCallbackHandler`: on_chain, on_tool, on_llm (`captured`). |
+
+### Strict Security Invariants in SDK & MCP
+
+1. **Telemetry vs. Semantic Declarations**: Automatic telemetry spans from LangChain or decorators are strictly stamped `captureMethod: 'captured'`. Explicit assertions via SDK or MCP are stamped `captureMethod: 'declared'`.
+2. **Authoritative State Protection (Core Rule 2)**: LLMs and MCP clients cannot self-attest claims or directly transition status to `attested`. All authoritative transitions require human principal verification.
+
+---
+
+## 6. Deprecation & Sunset Policies
 
 1. **Protocol Deprecation Notice**: Any supported protocol version deprecated by its upstream maintainer will enter ProofMesh `sunset` tracking for at least 6 months before de-registration.
 2. **Backward Compatibility**: ProofMesh will maintain canonical envelope compatibility across schema major versions. If an external adapter format changes, a new adapter transformer will map to the stable canonical event family.

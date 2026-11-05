@@ -13,3 +13,4 @@ export * from './adapters/switch.schema.js';
 export * from './adapters/webhook.schema.js';
 export * from './adapters/opentelemetry.schema.js';
 export * from './adapters/adapter-health.schema.js';
+export * from './sdk/sdk.schema.js';

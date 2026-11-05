@@ -7,6 +7,7 @@ import { tenantRoutes } from './routes/tenants.js';
 import { auditRoutes } from './routes/audit.js';
 import { gatewayRoutes } from './routes/gateway.js';
 import { adapterRoutes } from './routes/adapters.js';
+import { semanticRoutes } from './routes/semantic.js';
 import { createProblemDetails } from '@proofmesh/contracts';
 import {
   type DatabasePool,
@@ -116,6 +117,7 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
   });
 
   await fastify.register(claimRoutes, authDeps ?? {});
+  await fastify.register(semanticRoutes, { ...authDeps, gatewayService });
 
   return fastify;
 }

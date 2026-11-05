@@ -1,0 +1,23 @@
+{
+  "name": "@proofmesh/mcp-server",
+  "version": "1.0.0",
+  "description": "ProofMesh Model Context Protocol (MCP) Server for AI Governance and Claim Lineage",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "proofmesh-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@proofmesh/contracts": "workspace:*",
+    "@proofmesh/sdk": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

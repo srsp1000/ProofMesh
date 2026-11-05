@@ -1,0 +1,19 @@
+{
+  "name": "@proofmesh/sdk",
+  "version": "1.0.0",
+  "description": "ProofMesh Official TypeScript Developer SDK for AI Governance and Evidence Lineage",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@proofmesh/contracts": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
