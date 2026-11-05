@@ -6,6 +6,7 @@ import { authRoutes } from './routes/auth.js';
 import { tenantRoutes } from './routes/tenants.js';
 import { auditRoutes } from './routes/audit.js';
 import { gatewayRoutes } from './routes/gateway.js';
+import { adapterRoutes } from './routes/adapters.js';
 import { createProblemDetails } from '@proofmesh/contracts';
 import {
   type DatabasePool,
@@ -14,6 +15,10 @@ import {
   AuditRepository,
   InboxRepository,
   OutboxRepository,
+  AdapterConnectionRepository,
+  type IAdapterConnectionRepository,
+  type SecretManager,
+  EnvelopeSecretManager,
   type EventTransport,
   InMemoryEventTransport
 } from '@proofmesh/db';
@@ -31,6 +36,9 @@ export interface BuildServerOptions {
   outboxRepo?: OutboxRepository;
   transport?: EventTransport;
   gatewayService?: GatewayService;
+  adapterConnectionRepo?: IAdapterConnectionRepository;
+  secretManager?: SecretManager;
+  webhookSecret?: string;
   maxPayloadBytes?: number;
   logger?: boolean;
 }
@@ -91,6 +99,20 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
     ...authDeps,
     gatewayService,
     maxPayloadBytes: options.maxPayloadBytes
+  });
+
+  const secretManager = options.secretManager ?? new EnvelopeSecretManager();
+  const adapterConnectionRepo =
+    options.adapterConnectionRepo ?? (pool ? new AdapterConnectionRepository(pool) : undefined);
+
+  // Register adapter routes
+  await fastify.register(adapterRoutes, {
+    ...authDeps,
+    gatewayService,
+    secretManager,
+    adapterConnectionRepo,
+    maxPayloadBytes: options.maxPayloadBytes,
+    webhookSecret: options.webhookSecret
   });
 
   await fastify.register(claimRoutes, authDeps ?? {});

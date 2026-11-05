@@ -231,6 +231,51 @@ export class GatewayService {
   }
 
   /**
+   * Ingests a pre-transformed list of canonical envelopes from protocol adapters.
+   */
+  async ingestEnvelopes(
+    envelopes: CanonicalEventEnvelope[],
+    context: IngestContext
+  ): Promise<IngestBatchResponse> {
+    const eventIds: string[] = [];
+    let acceptedCount = 0;
+    let duplicateCount = 0;
+
+    for (const env of envelopes) {
+      const res = await this.ingestEvent(
+        {
+          id: env.id,
+          type: env.type,
+          schemaVersion: env.schemaVersion,
+          sourceIntegration: env.sourceIntegration,
+          instanceIdentity: env.instanceIdentity,
+          occurredAt: env.occurredAt,
+          correlationId: env.correlationId,
+          causationId: env.causationId,
+          traceId: env.traceId,
+          spanId: env.spanId,
+          workflowId: env.workflowId,
+          idempotencyKey: env.idempotencyKey,
+          data: env.data
+        },
+        context
+      );
+
+      eventIds.push(res.eventId);
+      if (res.status === 'accepted') acceptedCount++;
+      else duplicateCount++;
+    }
+
+    return {
+      success: true,
+      processedCount: envelopes.length,
+      acceptedCount,
+      duplicateCount,
+      eventIds
+    };
+  }
+
+  /**
    * Ingests Framework / MCP callback events.
    */
   async ingestFrameworkCallback(

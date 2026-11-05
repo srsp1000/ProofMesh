@@ -8,6 +8,7 @@ export * from './repositories/auth.repository.js';
 export * from './repositories/audit.repository.js';
 export * from './repositories/inbox.repository.js';
 export * from './repositories/outbox.repository.js';
+export * from './repositories/adapter-connection.repository.js';
 export * from './transport/event-transport.interface.js';
 export * from './transport/in-memory-transport.js';
 export * from './consumers/idempotent-consumer.js';

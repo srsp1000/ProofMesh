@@ -9,3 +9,7 @@ export * from './errors/problem-details.js';
 export * from './identity/identity.schema.js';
 export * from './auth/auth.schema.js';
 export * from './audit/audit.schema.js';
+export * from './adapters/switch.schema.js';
+export * from './adapters/webhook.schema.js';
+export * from './adapters/opentelemetry.schema.js';
+export * from './adapters/adapter-health.schema.js';

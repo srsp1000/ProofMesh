@@ -9,3 +9,4 @@ export * from './gateway/schema-registry.js';
 export * from './gateway/privacy-filter.js';
 export * from './events/traffic-lanes.js';
 export * from './events/idempotency.js';
+export * from './security/webhook-signature.js';

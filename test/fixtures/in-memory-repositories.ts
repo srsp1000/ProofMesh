@@ -24,7 +24,11 @@ import type {
   InboxEventRecord,
   DeadLetterRecord,
   InboxLagMetrics,
-  OutboxEventRecord
+  OutboxEventRecord,
+  AdapterConnectionRecord,
+  UpsertAdapterConnectionInput,
+  AdapterConnectionStatus,
+  IAdapterConnectionRepository
 } from '../../packages/db/src/index.js';
 import { MerkleTree } from '@proofmesh/domain';
 
@@ -662,5 +666,115 @@ export class InMemoryOutboxRepository {
       (e) => e.priorityLane === 'bulk_telemetry' && e.status === 'pending'
     ).length;
     return { highPriority: high, bulkTelemetry: bulk };
+  }
+}
+
+export class InMemoryAdapterConnectionRepository implements IAdapterConnectionRepository {
+  public connections: AdapterConnectionRecord[] = [];
+
+  async upsertConnection(
+    tenantId: string,
+    data: UpsertAdapterConnectionInput
+  ): Promise<AdapterConnectionRecord> {
+    const existingIndex = this.connections.findIndex(
+      (c) =>
+        c.tenantId === tenantId &&
+        c.adapterType === data.adapterType &&
+        c.instanceId === data.instanceId
+    );
+
+    const now = new Date().toISOString();
+
+    if (existingIndex >= 0) {
+      const existing = this.connections[existingIndex]!;
+      existing.connectionId = data.connectionId;
+      if (data.cursorPosition !== undefined) existing.cursorPosition = data.cursorPosition;
+      if (data.generation !== undefined) existing.generation = data.generation;
+      if (data.status !== undefined) existing.status = data.status;
+      existing.stateMetadata = { ...existing.stateMetadata, ...data.stateMetadata };
+      if (data.lastEventAt !== undefined) existing.lastEventAt = data.lastEventAt;
+      existing.updatedAt = now;
+      return existing;
+    }
+
+    const record: AdapterConnectionRecord = {
+      id: crypto.randomUUID(),
+      tenantId,
+      workspaceId: data.workspaceId ?? null,
+      projectId: data.projectId ?? null,
+      adapterType: data.adapterType,
+      instanceId: data.instanceId,
+      connectionId: data.connectionId,
+      cursorPosition: data.cursorPosition ?? 0,
+      generation: data.generation ?? null,
+      status: data.status ?? 'disconnected',
+      stateMetadata: data.stateMetadata ?? {},
+      lastEventAt: data.lastEventAt ?? null,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.connections.push(record);
+    return record;
+  }
+
+  async getConnection(
+    tenantId: string,
+    adapterType: string,
+    instanceId: string
+  ): Promise<AdapterConnectionRecord | null> {
+    const found = this.connections.find(
+      (c) => c.tenantId === tenantId && c.adapterType === adapterType && c.instanceId === instanceId
+    );
+    return found ?? null;
+  }
+
+  async getConnectionById(
+    tenantId: string,
+    connectionId: string
+  ): Promise<AdapterConnectionRecord | null> {
+    const found = this.connections.find(
+      (c) => c.tenantId === tenantId && c.connectionId === connectionId
+    );
+    return found ?? null;
+  }
+
+  async updateCursor(
+    tenantId: string,
+    connectionId: string,
+    cursor: number,
+    generation?: string
+  ): Promise<void> {
+    const found = this.connections.find(
+      (c) => c.tenantId === tenantId && c.connectionId === connectionId
+    );
+    if (found) {
+      found.cursorPosition = cursor;
+      if (generation !== undefined) found.generation = generation;
+      found.lastEventAt = new Date().toISOString();
+      found.updatedAt = new Date().toISOString();
+    }
+  }
+
+  async updateStatus(
+    tenantId: string,
+    connectionId: string,
+    status: AdapterConnectionStatus,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    const found = this.connections.find(
+      (c) => c.tenantId === tenantId && c.connectionId === connectionId
+    );
+    if (found) {
+      found.status = status;
+      if (metadata) {
+        found.stateMetadata = { ...found.stateMetadata, ...metadata };
+      }
+      found.updatedAt = new Date().toISOString();
+    }
+  }
+
+  async listConnections(tenantId: string): Promise<AdapterConnectionRecord[]> {
+    return this.connections.filter((c) => c.tenantId === tenantId);
   }
 }
