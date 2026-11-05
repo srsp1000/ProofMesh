@@ -4,7 +4,7 @@
 **Version:** 1.0.0-PROPOSED  
 **Date:** 2026-11-04  
 **Author:** Lead Software Architect and Engineering Orchestrator  
-**Status:** Baselined Quality Assurance Specification  
+**Status:** Baselined Quality Assurance Specification
 
 ---
 
@@ -19,6 +19,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
 ### 2.1 Claim Management (FR-CLAIM)
 
 #### AC-CLAIM-001: Claim Submission & Concept Versioning (`FR-CLAIM-001`)
+
 - **Given**: An authenticated client with valid JWT possessing scope `claim:create` for Tenant `T1` and Project `P1`.
 - **When**: The client POSTs to `/v1/claims` with:
   ```json
@@ -39,6 +40,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
   - Submitting without `statement` or with empty string returns `400 Bad Request` with structured Zod error details.
 
 #### AC-CLAIM-002: Deterministic Claim State Machine Transition (`FR-CLAIM-002`)
+
 - **Given**: A `ClaimVersion` in status `submitted`.
 - **When**: The internal evaluation service posts a valid transition request to `/v1/claims/:id/transition` with `targetState: "evaluating"`.
 - **Then**:
@@ -53,6 +55,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
 ### 2.2 Evidence Processing (FR-EVID)
 
 #### AC-EVID-001: Idempotent Evidence Ingestion & Cryptographic Digest (`FR-EVID-001`)
+
 - **Given**: A raw PDF or JSON evidence payload.
 - **When**: The client POSTs to `/v1/evidence` with header `Idempotency-Key: e1a1-2b3c`.
 - **Then**:
@@ -64,6 +67,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
   - Submitting an evidence payload larger than configured maximum (50MB) returns `413 Payload Too Large`.
 
 #### AC-EVID-002: Claim-Evidence Evaluation Matrix (`FR-EVID-002`)
+
 - **Given**: An existing `ClaimVersion` and an ingested `EvidenceItem`.
 - **When**: The evaluator records an evaluation with `outcome: "refutes"` and `applicability: "direct"`.
 - **Then**:
@@ -79,6 +83,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
 ### 2.3 Policy Enforcement (FR-POL)
 
 #### AC-POL-001: Synchronous Policy Gatekeeping & Latency SLA (`FR-POL-001`)
+
 - **Given**: An active OPA Rego policy bundle loaded in memory requiring tool calls with `risk_level: "high"` to obtain human approval.
 - **When**: An agent attempts to invoke tool `drop_database_partition` with `risk_level: "high"`.
 - **Then**:
@@ -94,6 +99,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
 ### 2.4 Human Review & Attestation (FR-REV)
 
 #### AC-REV-001: Review Case Resolution & Immutability (`FR-REV-001`, `FR-REV-002`)
+
 - **Given**: An active `ReviewCase` in status `open` linked to a `disputed` claim.
 - **When**: An authorized compliance officer submits an approval with verdict `approve_attestation` and statement.
 - **Then**:
@@ -107,6 +113,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
 ### 2.5 Lineage Graph & Auditing (FR-GRAPH)
 
 #### AC-GRAPH-001: Recursive DAG Lineage Traversal (`FR-GRAPH-001`)
+
 - **Given**: A graph containing a Source Artifact -> Evidence Item -> Assessment -> Claim Version -> Decision.
 - **When**: Client requests `GET /v1/lineage/claims/:id?depth=5`.
 - **Then**:
@@ -115,6 +122,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
   3. Response execution time in PostgreSQL is **< 100ms**.
 
 #### AC-GRAPH-002: Audit Bundle Cryptographic Verification (`FR-GRAPH-002`)
+
 - **Given**: An exported audit bundle zip containing manifest.json, records.jsonl, and signature.sig.
 - **When**: An independent verification script hashes the contents and checks against the public key.
 - **Then**:
@@ -126,6 +134,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
 ## 3. Non-Functional & Security Acceptance Criteria
 
 ### AC-SEC-001: Database Row-Level Security Isolation (`NFR-SEC-001`)
+
 - **Given**: Two tenants `Tenant_Alpha` and `Tenant_Beta` with claims populated in the shared database.
 - **When**: A connection sets session config `SET LOCAL app.current_tenant_id = 'Tenant_Alpha'` and executes `SELECT * FROM claims;`.
 - **Then**:
@@ -134,6 +143,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
   3. Executing an un-scoped raw update `UPDATE claims SET statement = 'Hacked';` updates **only** `Tenant_Alpha` rows.
 
 ### AC-SEC-002: Authoritative State Guarding (`NFR-SEC-002`)
+
 - **Given**: An external agent attempting to forge claim state by sending a payload `{"status": "attested"}` to any ingestion endpoint.
 - **Then**:
   1. The `status` field is stripped or rejected by the input schema validator.
@@ -145,6 +155,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
 ## 4. Integration Acceptance Criteria
 
 ### AC-INT-001: OpenTelemetry GenAI Span Parsing (`INT-OTEL-001`)
+
 - **Given**: An OpenTelemetry trace span with attributes:
   - `gen_ai.operation.name: "chat"`
   - `gen_ai.provider.name: "anthropic"`
@@ -157,6 +168,7 @@ This document provides formal, unambiguous, and automated acceptance criteria fo
   3. Model attributes are mapped to standard qualifiers without loss.
 
 ### AC-INT-002: Model Context Protocol Tool Interception (`INT-MCP-001`)
+
 - **Given**: An MCP client executing a tool call through the ProofMesh MCP Gateway.
 - **When**: The tool invocation is evaluated against active policy:
   - If policy evaluates to `admit`: The request is proxied to the downstream tool server and returns output.

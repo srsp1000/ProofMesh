@@ -1,0 +1,34 @@
+{
+  "name": "proofmesh-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.6.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "tsc -b",
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yaml,yml}\"",
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:contract": "vitest run test/contract",
+    "test:integration": "vitest run test/integration",
+    "test:security": "vitest run test/security",
+    "test:architecture": "vitest run test/architecture",
+    "test:coverage": "vitest run --coverage",
+    "secrets:scan": "node scripts/scan-secrets.mjs",
+    "audit": "pnpm audit --audit-level=high"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.20.5",
+    "eslint": "^9.39.5",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^2.1.9"
+  }
+}

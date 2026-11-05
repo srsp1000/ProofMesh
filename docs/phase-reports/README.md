@@ -3,7 +3,9 @@
 This directory stores formal Phase Completion Reports generated at the conclusion of each development phase.
 
 ## Requirements for Phase Reports
+
 In accordance with ProofMesh SDLC guidelines, every phase report must document:
+
 1. **Requirements Addressed**: Complete list of requirements implemented with links to PRs and commits.
 2. **Architecture Conformance**: Sign-off from `architecture-auditor` confirming ADR compliance and lack of anti-patterns.
 3. **Security Audit**: Sign-off from `security-reviewer` verifying tenant isolation and untrusted input boundaries.

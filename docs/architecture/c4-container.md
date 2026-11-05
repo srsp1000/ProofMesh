@@ -4,7 +4,7 @@
 **Version:** 1.0.0-PROPOSED  
 **Date:** 2026-11-04  
 **Author:** Lead Software Architect and Engineering Orchestrator  
-**Status:** Baselined Architecture Specification  
+**Status:** Baselined Architecture Specification
 
 ---
 
@@ -23,7 +23,7 @@ C4Container
     System_Boundary(c1, "ProofMesh Platform") {
         Container(spa, "Governance Web UI", "React 19 / Vite 6", "Single-Page Application providing governance dashboards, lineage graphs, and review queues.")
         Container(gateway, "API & Integration Gateway", "Fastify / Node.js", "Handles TLS termination, JWT validation, rate limiting, and Zod runtime schema validation.")
-        
+
         Container_Boundary(monolith, "ProofMesh Modular Core (Node.js 26+)") {
             Component(claimSvc, "Claim Service", "TypeScript", "Authoritative state machine managing draft->attested claim lifecycles.")
             Component(evidSvc, "Evidence Engine", "TypeScript", "Computes SHA-256 digests, coordinates unpdf parsing, and builds assessment matrix.")
@@ -42,7 +42,7 @@ C4Container
     Rel(dev, spa, "Configures rules & inspects logs", "HTTPS")
     Rel(spa, gateway, "Issues authenticated GraphQL/REST calls", "HTTPS / JSON")
     Rel(agent, gateway, "Streams telemetry & requests policy admission", "HTTPS / REST / WebSocket")
-    
+
     Rel(gateway, monolith, "Forwards validated tenant requests", "In-Process / IPC")
     Rel(monolith, pgDb, "Reads/writes state under RLS", "TCP / PostgreSQL Port 5432")
     Rel(monolith, objStore, "Streams raw evidence files", "HTTPS / S3 API")
@@ -54,11 +54,11 @@ C4Container
 
 ## 2. Container Descriptions & Technical Responsibilities
 
-| Container | Technology Stack | Scaling Model | Responsibilities & Invariants |
-| :--- | :--- | :--- | :--- |
-| **Governance Web UI** | React 19, Vite 6, TailwindCSS | Static CDN hosting | Provides WCAG 2.1 AA accessible human review portal, interactive DAG visualizer, and policy management. Never implements client-authoritative security. |
-| **API & Integration Gateway** | Fastify, Zod, `@fastify/jwt` | Horizontal stateless replicas | Enforces TLS termination, extracts and validates JWT tokens, injects `TenantContext`, checks idempotency keys, and applies strict Zod parsing before delegating to domain services. |
-| **ProofMesh Modular Core** | TypeScript 5.6+, Node.js 26+ | Horizontal stateless replicas | Encapsulates all business logic, claim state transitions, evidence correlation, and OPA policy evaluation. Enforces strict zero-leakage module boundaries. |
-| **Primary Relational Store** | PostgreSQL 16 Enterprise | Primary-Replica with HA failover | Stores all transactional entities, claim versions, and append-only audit ledgers. Row-Level Security (RLS) policies enforce multi-tenant isolation at the engine level. |
-| **Evidence Object Store** | S3 / MinIO (Customer VPC compatible) | Cloud-managed high durability | Content-addressable storage for raw PDF documents, binary evidence items, context packets, and compressed audit bundle exports. |
-| **Event Transport** | NATS JetStream (or PostgreSQL Outbox) | 3-node Raft consensus cluster | Decouples ingestion from downstream evaluations. Provides at-least-once message delivery, stream replay, and consumer acknowledgments. |
+| Container                     | Technology Stack                      | Scaling Model                    | Responsibilities & Invariants                                                                                                                                                       |
+| :---------------------------- | :------------------------------------ | :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Governance Web UI**         | React 19, Vite 6, TailwindCSS         | Static CDN hosting               | Provides WCAG 2.1 AA accessible human review portal, interactive DAG visualizer, and policy management. Never implements client-authoritative security.                             |
+| **API & Integration Gateway** | Fastify, Zod, `@fastify/jwt`          | Horizontal stateless replicas    | Enforces TLS termination, extracts and validates JWT tokens, injects `TenantContext`, checks idempotency keys, and applies strict Zod parsing before delegating to domain services. |
+| **ProofMesh Modular Core**    | TypeScript 5.6+, Node.js 26+          | Horizontal stateless replicas    | Encapsulates all business logic, claim state transitions, evidence correlation, and OPA policy evaluation. Enforces strict zero-leakage module boundaries.                          |
+| **Primary Relational Store**  | PostgreSQL 16 Enterprise              | Primary-Replica with HA failover | Stores all transactional entities, claim versions, and append-only audit ledgers. Row-Level Security (RLS) policies enforce multi-tenant isolation at the engine level.             |
+| **Evidence Object Store**     | S3 / MinIO (Customer VPC compatible)  | Cloud-managed high durability    | Content-addressable storage for raw PDF documents, binary evidence items, context packets, and compressed audit bundle exports.                                                     |
+| **Event Transport**           | NATS JetStream (or PostgreSQL Outbox) | 3-node Raft consensus cluster    | Decouples ingestion from downstream evaluations. Provides at-least-once message delivery, stream replay, and consumer acknowledgments.                                              |

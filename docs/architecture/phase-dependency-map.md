@@ -4,7 +4,7 @@
 **Version:** 1.1.0  
 **Date:** 2026-11-04  
 **Author:** Lead Software Architect and Engineering Orchestrator  
-**Status:** Baselined Architecture Specification  
+**Status:** Baselined Architecture Specification
 
 ---
 
@@ -15,22 +15,22 @@ ProofMesh follows a disciplined, evidence-based SDLC organized into gated phases
 ```mermaid
 flowchart TD
     P0["Phase 0: Repository Discovery, Research & Baseline<br/>(Complete)"] --> G0{Phase 0 Gate}
-    
+
     G0 -->|Approved| P1["Phase 1: Product Requirements, Domain Model, System Architecture & Contracts<br/>(Current Phase - Complete)"]
     P1 --> G1{Phase 1 Gate}
-    
+
     G1 -->|Approved| P2["Phase 2: Core Domain Implementation, Persistence & Migrations<br/>(PostgreSQL RLS, Claims/Evidence Domain, Test Harness)"]
     P2 --> G2{Phase 2 Gate}
-    
+
     G2 -->|Approved| P3["Phase 3: Ingestion Pipeline & Protocol Adapters<br/>(OTel GenAI, MCP Interceptor, Webhooks, Idempotency)"]
     P3 --> G3{Phase 3 Gate}
-    
+
     G3 -->|Approved| P4["Phase 4: Policy Engine, Evidence Evaluation & Lineage DAG<br/>(In-Process OPA Wasm, Recursive CTE DAG, Audit Bundles)"]
     P4 --> G4{Phase 4 Gate}
-    
+
     G4 -->|Approved| P5["Phase 5: Human Review Portal & Governance Web UI<br/>(React/Vite, Quorum Approvals, Lineage Visualizer)"]
     P5 --> G5{Phase 5 Gate}
-    
+
     G5 -->|Approved| P6["Phase 6: End-to-End Verification & Production Readiness<br/>(Load Testing, Security Audit, Release Sign-off)"]
 ```
 
@@ -39,6 +39,7 @@ flowchart TD
 ## 2. Phase Breakdown & Critical Dependency Order
 
 ### Phase 0: Discovery, Research & Product Validation (Complete)
+
 - **Primary Owner**: Lead Software Architect & Research Analyst
 - **Objective**: Establish repository isolation, audit host toolchains, baseline verified requirements, and produce Phase 0 deliverables.
 - **Key Deliverables**: `docs/research/repository-audit.md`, `docs/research/technology-verification.md`, `docs/product/requirements-inventory.md`, `docs/product/assumptions-and-open-questions.md`, `docs/architecture/current-state.md`, `docs/phase-reports/phase-00.md`.
@@ -47,6 +48,7 @@ flowchart TD
 ---
 
 ### Phase 1: Product Requirements, Domain Model, System Architecture & Contracts (Current)
+
 - **Primary Owner**: Lead Software Architect
 - **Objective**: Authoritative PRD, 11-cluster domain model, C4 architecture models, trust boundaries, event contracts, API schemas, and foundational ADRs. Zero application feature code.
 - **Key Deliverables**:
@@ -62,6 +64,7 @@ flowchart TD
 ---
 
 ### Phase 2: Core Domain Implementation, Persistence & Migrations
+
 - **Primary Owners**: Backend Engineer & Data Engineer (Isolated Worktrees)
 - **Objective**: Establish `package.json`, TypeScript config, database migrations with PostgreSQL Row-Level Security, pure domain entities, and unit/integration test suites.
 - **Critical Dependencies**: Requires Phase 1 domain models, state machine specifications, and ADR sign-offs.
@@ -75,6 +78,7 @@ flowchart TD
 ---
 
 ### Phase 3: Ingestion Pipeline & Protocol Adapters
+
 - **Primary Owners**: Integration Engineer & Backend Engineer
 - **Objective**: Implement asynchronous, non-blocking telemetry ingestion, OpenTelemetry GenAI trace parser, MCP connector proxy, and webhook receiver with idempotency keys.
 - **Critical Dependencies**: Requires Phase 2 persistence layer and event envelopes.
@@ -89,6 +93,7 @@ flowchart TD
 ---
 
 ### Phase 4: Policy Engine, Evidence Evaluation & Lineage DAG
+
 - **Primary Owners**: Backend Engineer & Data Engineer
 - **Objective**: Integrate in-process OPA WebAssembly evaluator. Implement the Claim-Evidence Outcome/Applicability matrix, append-only lineage DAG, and cryptographic audit bundle exporter.
 - **Critical Dependencies**: Requires Phase 2 claim models and Phase 3 ingested evidence.
@@ -102,6 +107,7 @@ flowchart TD
 ---
 
 ### Phase 5: Human Review Portal & Governance Web UI
+
 - **Primary Owner**: Frontend Engineer (React/Vite)
 - **Objective**: Build the user interface for governance officers, human-in-the-loop attestation queues, and interactive evidence lineage visualizers.
 - **Critical Dependencies**: Requires Phase 4 policy API and lineage endpoints.
@@ -115,6 +121,7 @@ flowchart TD
 ---
 
 ### Phase 6: End-to-End Verification & Production Readiness
+
 - **Primary Owners**: QA Engineer, Security Reviewer & Architecture Auditor
 - **Objective**: Execute comprehensive end-to-end load tests, penetration testing, security compliance audits, and release packaging.
 - **Critical Dependencies**: All phases (1–5) fully integrated on `main`.
@@ -130,10 +137,10 @@ flowchart TD
 
 ## 3. Parallelization Matrix & File Isolation Rules
 
-| Parallel Workstream Pair | Permitted Concurrency | Isolation Mechanism |
-| :--- | :--- | :--- |
-| **Backend Engineer + Data Engineer** (Phase 2) | **YES** | Backend works on `src/backend/domain/` in Worktree A; Data Engineer works on `src/db/migrations/` in Worktree B. |
-| **Integration Engineer + Backend Engineer** (Phase 3) | **YES** | Integration works on `src/integrations/` in Worktree A; Backend works on `src/backend/services/` in Worktree B. |
-| **Frontend Engineer + Backend Engineer** (Phase 5) | **YES** | Frontend works on `src/frontend/` in Worktree A; Backend works on `src/backend/` in Worktree B. |
-| **Any Two Agents modifying `src/db/migrations/`** | **NO** | Sequential only. Database migrations must have strictly monotonic versioning. |
-| **Any Implementation Agent modifying `docs/adr/`** | **NO** | Centralized only. All ADR changes are authored or approved by the Lead Architect. |
+| Parallel Workstream Pair                              | Permitted Concurrency | Isolation Mechanism                                                                                              |
+| :---------------------------------------------------- | :-------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| **Backend Engineer + Data Engineer** (Phase 2)        | **YES**               | Backend works on `src/backend/domain/` in Worktree A; Data Engineer works on `src/db/migrations/` in Worktree B. |
+| **Integration Engineer + Backend Engineer** (Phase 3) | **YES**               | Integration works on `src/integrations/` in Worktree A; Backend works on `src/backend/services/` in Worktree B.  |
+| **Frontend Engineer + Backend Engineer** (Phase 5)    | **YES**               | Frontend works on `src/frontend/` in Worktree A; Backend works on `src/backend/` in Worktree B.                  |
+| **Any Two Agents modifying `src/db/migrations/`**     | **NO**                | Sequential only. Database migrations must have strictly monotonic versioning.                                    |
+| **Any Implementation Agent modifying `docs/adr/`**    | **NO**                | Centralized only. All ADR changes are authored or approved by the Lead Architect.                                |

@@ -4,7 +4,7 @@
 **Version:** 1.0.0-PROPOSED  
 **Date:** 2026-11-04  
 **Author:** Lead Software Architect and Engineering Orchestrator  
-**Status:** Baselined Architecture Specification  
+**Status:** Baselined Architecture Specification
 
 ---
 
@@ -13,6 +13,7 @@
 All synchronous ProofMesh HTTP APIs adhere to **OpenAPI 3.1.0** standards. All error responses strictly conform to **RFC 7807 Problem Details for HTTP APIs** (`application/problem+json`).
 
 ### Standard RFC 7807 Error Envelope
+
 ```json
 {
   "type": "https://proofmesh.io/errors/invalid-state-transition",
@@ -39,6 +40,7 @@ All synchronous ProofMesh HTTP APIs adhere to **OpenAPI 3.1.0** standards. All e
 ### 2.1 Claims API (`/v1/claims`)
 
 #### `POST /v1/claims`
+
 - **Description**: Submits an AI-generated statement or compliance assertion.
 - **Headers**: `Authorization: Bearer <jwt>`, `Idempotency-Key: <uuid>`.
 - **Request Body**:
@@ -56,6 +58,7 @@ All synchronous ProofMesh HTTP APIs adhere to **OpenAPI 3.1.0** standards. All e
   - `400 Bad Request`: Schema validation failure.
 
 #### `POST /v1/claims/:id/transition`
+
 - **Description**: Executes a guarded state transition on a `ClaimVersion`.
 - **Request Body**:
   ```json
@@ -74,6 +77,7 @@ All synchronous ProofMesh HTTP APIs adhere to **OpenAPI 3.1.0** standards. All e
 ### 2.2 Evidence API (`/v1/evidence`)
 
 #### `POST /v1/evidence`
+
 - **Description**: Ingests raw evidence, computes SHA-256 digest, and stores content.
 - **Headers**: `Idempotency-Key: <uuid>`, `Content-Type: application/json` or `application/pdf`.
 - **Responses**:
@@ -85,6 +89,7 @@ All synchronous ProofMesh HTTP APIs adhere to **OpenAPI 3.1.0** standards. All e
 ### 2.3 Synchronous Policy Evaluation API (`/v1/policy/evaluate`)
 
 #### `POST /v1/policy/evaluate`
+
 - **Description**: Evaluates an agent action against active OPA Rego policy bundles.
 - **Request Body**:
   ```json
@@ -115,6 +120,7 @@ All synchronous ProofMesh HTTP APIs adhere to **OpenAPI 3.1.0** standards. All e
 ### 2.4 Lineage DAG API (`/v1/lineage/claims/:id`)
 
 #### `GET /v1/lineage/claims/:id?depth=5&direction=upstream`
+
 - **Description**: Traverses the immutable lineage DAG via recursive CTE queries.
 - **Response (`200 OK`)**:
   ```json
@@ -195,6 +201,7 @@ export interface ProofMeshClient {
 ProofMesh exposes an **MCP Proxy Gateway** acting as an inline Policy Enforcement Point.
 
 ### MCP Tool Definitions
+
 1. **`proofmesh_evaluate_policy`**:
    - Evaluates whether an agent may call a specific tool.
    - Parameters: `toolName` (string), `arguments` (object), `failPolicy` (string).
@@ -203,6 +210,7 @@ ProofMesh exposes an **MCP Proxy Gateway** acting as an inline Policy Enforcemen
    - Parameters: `statement` (string), `confidence` (number), `evidenceUris` (array).
 
 ### MCP Authorization Flow
+
 1. MCP client requests tool execution over JSON-RPC.
 2. ProofMesh intercepts request, evaluates OPA policy.
 3. If `admit`: Proxies call to downstream tool server and streams response back to client.
@@ -214,21 +222,22 @@ ProofMesh exposes an **MCP Proxy Gateway** acting as an inline Policy Enforcemen
 
 The OpenTelemetry receiver maps incoming OTLP GenAI spans into canonical ProofMesh domain entities:
 
-| OpenTelemetry Attribute | ProofMesh Domain Mapping | Target Entity & Field |
-| :--- | :--- | :--- |
-| `gen_ai.operation.name` | Operation Type (`chat`, `completion`, `embeddings`) | `EvidenceItem.qualifiers.operation` |
-| `gen_ai.provider.name` | Model Provider (`openai`, `anthropic`, `bedrock`) | `EvidenceItem.qualifiers.provider` |
-| `gen_ai.request.model` | Model Identifier (e.g. `claude-3-5-sonnet`) | `EvidenceItem.qualifiers.requestModel` |
-| `gen_ai.response.model` | Actual Model Version executed | `EvidenceItem.qualifiers.responseModel` |
-| `gen_ai.usage.input_tokens` | Input Token Metric | `AgentActivity.prompt_tokens` |
-| `gen_ai.usage.output_tokens`| Output Token Metric | `AgentActivity.completion_tokens` |
-| Span ID & Trace ID | Telemetry Correlation ID | `EvidenceItem.content_payload.traceId` |
+| OpenTelemetry Attribute      | ProofMesh Domain Mapping                            | Target Entity & Field                   |
+| :--------------------------- | :-------------------------------------------------- | :-------------------------------------- |
+| `gen_ai.operation.name`      | Operation Type (`chat`, `completion`, `embeddings`) | `EvidenceItem.qualifiers.operation`     |
+| `gen_ai.provider.name`       | Model Provider (`openai`, `anthropic`, `bedrock`)   | `EvidenceItem.qualifiers.provider`      |
+| `gen_ai.request.model`       | Model Identifier (e.g. `claude-3-5-sonnet`)         | `EvidenceItem.qualifiers.requestModel`  |
+| `gen_ai.response.model`      | Actual Model Version executed                       | `EvidenceItem.qualifiers.responseModel` |
+| `gen_ai.usage.input_tokens`  | Input Token Metric                                  | `AgentActivity.prompt_tokens`           |
+| `gen_ai.usage.output_tokens` | Output Token Metric                                 | `AgentActivity.completion_tokens`       |
+| Span ID & Trace ID           | Telemetry Correlation ID                            | `EvidenceItem.content_payload.traceId`  |
 
 ---
 
 ## 6. Switch Protocol & Session Resume Contract
 
 For real-time agent connections (WebSocket/SSE), ProofMesh implements session persistence conforming to the Agent Client Protocol (ACP):
+
 - **`session/resume` Method**:
   ```json
   {
@@ -249,13 +258,13 @@ For real-time agent connections (WebSocket/SSE), ProofMesh implements session pe
 
 To prevent ambiguity, dependency graph edges must use only this approved vocabulary:
 
-| Edge Type | Valid Source Nodes | Valid Target Nodes | Semantic Meaning |
-| :--- | :--- | :--- | :--- |
+| Edge Type      | Valid Source Nodes                | Valid Target Nodes                | Semantic Meaning                                 |
+| :------------- | :-------------------------------- | :-------------------------------- | :----------------------------------------------- |
 | `derives_from` | `ClaimVersion`, `DecisionVersion` | `SourceArtifact`, `SourcePassage` | Claim text was extracted or derived from source. |
-| `supported_by` | `ClaimVersion` | `EvidenceItem` | Evidence corroborates the statement. |
-| `refuted_by` | `ClaimVersion` | `EvidenceItem` | Evidence contradicts the statement. |
-| `governed_by` | `DecisionVersion`, `ClaimVersion` | `PolicyVersion` | Policy bundle evaluated against the node. |
-| `attested_by` | `ClaimVersion` | `Approval` | Human or authorized principal attestation. |
+| `supported_by` | `ClaimVersion`                    | `EvidenceItem`                    | Evidence corroborates the statement.             |
+| `refuted_by`   | `ClaimVersion`                    | `EvidenceItem`                    | Evidence contradicts the statement.              |
+| `governed_by`  | `DecisionVersion`, `ClaimVersion` | `PolicyVersion`                   | Policy bundle evaluated against the node.        |
+| `attested_by`  | `ClaimVersion`                    | `Approval`                        | Human or authorized principal attestation.       |
 
 ---
 

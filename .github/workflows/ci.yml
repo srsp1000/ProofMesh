@@ -1,0 +1,73 @@
+name: ProofMesh CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Lint, Typecheck, Test & Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm Package Manager
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+          run_install: false
+
+      - name: Get pnpm Store Directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm Cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Secret Scanning
+        run: pnpm run secrets:scan
+
+      - name: Code Formatting Check
+        run: pnpm run format:check
+
+      - name: Code Linting
+        run: pnpm run lint
+
+      - name: Static Type Checking
+        run: pnpm run typecheck
+
+      - name: Architecture Boundary Verification
+        run: pnpm run test:architecture
+
+      - name: Unit Test Suite
+        run: pnpm run test:unit
+
+      - name: Contract Test Suite
+        run: pnpm run test:contract
+
+      - name: Security Test Suite
+        run: pnpm run test:security
+
+      - name: Workspace Build
+        run: pnpm run build
+
+      - name: Dependency Vulnerability Audit
+        run: pnpm run audit

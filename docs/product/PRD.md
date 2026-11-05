@@ -4,7 +4,7 @@
 **Version:** 1.0.0-PROPOSED  
 **Date:** 2026-11-04  
 **Author:** Lead Software Architect and Engineering Orchestrator  
-**Status:** Baselined Architecture Specification  
+**Status:** Baselined Architecture Specification
 
 ---
 
@@ -19,6 +19,7 @@ ProofMesh bridges the gap between raw AI execution traces and authoritative gove
 ## 2. Non-Negotiable Product Principles & Non-Goals
 
 ### 2.1 Core Invariants
+
 1. **Separation of Authoritative State from LLM Reasoning**: LLMs and autonomous agents may generate claims, draft summaries, and suggest decisions, but they can **never** directly mutate authoritative claim statuses, policy rules, tenant identities, or audit logs. All transitions are governed by deterministic domain services.
 2. **Distinct Semantic Axes**:
    - **Claim Lifecycle**: `draft` -> `submitted` -> `evaluating` -> `attested` | `disputed` | `rejected` -> `archived`.
@@ -30,6 +31,7 @@ ProofMesh bridges the gap between raw AI execution traces and authoritative gove
 4. **Asynchronous Observation by Default**: Observation and telemetry must be non-blocking with fail-open behavior. Synchronous policy gating is strictly opt-in with explicit fail-open/fail-closed semantics.
 
 ### 2.2 Explicit Non-Goals
+
 1. **Universal Truth Guarantees**: ProofMesh does **not** assert metaphysical or real-world "truth." It asserts and evaluates whether an explicit claim is corroborated, contradicted, or untestable relative to a specified, cryptographically snapshot evidence corpus and policy bundle.
 2. **Hidden Model-Causality Claims**: ProofMesh does **not** treat model activation traces or co-occurring telemetry as proof of decision causality. Relationships derived through heuristics are explicitly tagged as `inferred` or `unknown`, never as `captured` or `attested`.
 3. **Automatic Complete-Lineage Claims**: ProofMesh does **not** assume complete graph visibility across opaque third-party models or external network partitions. When dependencies cannot be observed directly, coverage records explicitly tag them as `partial` or `unknown`.
@@ -39,6 +41,7 @@ ProofMesh bridges the gap between raw AI execution traces and authoritative gove
 ## 3. Product Scope Tiers
 
 To balance immediate vertical-slice execution with long-term enterprise scalability, all requirements are categorized into three delivery tiers:
+
 - **Tier 1 (Initial Core - v1.0.0 / Phases 1–3)**: Minimal viable vertical slice including core domain state machines, PostgreSQL RLS persistence, OpenTelemetry ingestion, MCP connector, local OPA evaluation, and basic CLI/REST interfaces.
 - **Tier 2 (Enterprise Governance - v1.1.0 / Phases 4–5)**: Durable Temporal human-in-the-loop workflow orchestration, React governance portal, visual lineage DAG, signed audit bundle export, and NATS JetStream event streaming.
 - **Tier 3 (Advanced Enterprise - Post-v1)**: Multi-region active-active replication, hardware security module (HSM) attestation signing, automated ML red-teaming connectors, and distributed graph query sharding.
@@ -54,6 +57,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 ### 4.1 Claim Management Module (FR-CLAIM)
 
 #### `FR-CLAIM-001`: Authoritative Claim Submission & Concept Versioning
+
 - **User / Principal**: Authenticated Client Service, SDK, or Integration Connector.
 - **Trigger**: Client submits an AI-generated statement, tool assertion, or compliance claim.
 - **Input**:
@@ -75,6 +79,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 - **Scope Tier**: Tier 1 (Initial Core).
 
 #### `FR-CLAIM-002`: Deterministic Claim State Machine Transition
+
 - **User / Principal**: Governance Engine, Evaluation Service, or Authorized Human Reviewer.
 - **Trigger**: Evidence evaluation completes, policy threshold is breached, or human review concludes.
 - **Input**:
@@ -96,6 +101,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 ### 4.2 Evidence Processing & Ingestion Module (FR-EVID)
 
 #### `FR-EVID-001`: Idempotent Evidence Ingestion & Cryptographic Snapshotting
+
 - **User / Principal**: AI Application, Telemetry Collector, Document Pipeline.
 - **Trigger**: AI application records tool output, document retrieval, or execution log.
 - **Input**:
@@ -114,6 +120,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 - **Scope Tier**: Tier 1 (Initial Core).
 
 #### `FR-EVID-002`: Claim-Evidence Evaluation Matrix
+
 - **User / Principal**: Evaluation Application Service.
 - **Trigger**: New evidence linked to submitted claim.
 - **Input**:
@@ -136,6 +143,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 ### 4.3 Policy Enforcement & Gatekeeping Module (FR-POL)
 
 #### `FR-POL-001`: Synchronous Policy Evaluation & Gatekeeping
+
 - **User / Principal**: API Gateway, MCP Interceptor, Client Application.
 - **Trigger**: Client requests pre-execution admission (e.g. before executing sensitive tool).
 - **Input**:
@@ -157,6 +165,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 - **Scope Tier**: Tier 1 (Initial Core).
 
 #### `FR-POL-002`: Dynamic Policy Bundle Distribution
+
 - **User / Principal**: Security Administrator / CI Automation.
 - **Trigger**: Security team updates governance rules or compliance policies.
 - **Input**:
@@ -177,6 +186,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 ### 4.4 Human Review & Attestation Workflow Module (FR-REV)
 
 #### `FR-REV-001`: Review Case Creation & Orchestration
+
 - **User / Principal**: Governance State Machine or Policy Service.
 - **Trigger**: Claim receives `disputed` status or policy disposition returns `require_human_review`.
 - **Input**:
@@ -194,6 +204,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 - **Scope Tier**: Tier 2 (Enterprise Governance).
 
 #### `FR-REV-002`: Authoritative Human Attestation Sign-Off
+
 - **User / Principal**: Authorized Human Reviewer.
 - **Trigger**: Reviewer completes investigation and renders verdict in governance portal.
 - **Input**:
@@ -215,6 +226,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 ### 4.5 Lineage Graph & Cryptographic Audit Module (FR-GRAPH)
 
 #### `FR-GRAPH-001`: Immutable Dependency DAG Construction
+
 - **User / Principal**: Lineage Engine.
 - **Trigger**: Creation of claim version, evidence link, or decision outcome.
 - **Input**:
@@ -233,6 +245,7 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 - **Scope Tier**: Tier 1 (Initial Core).
 
 #### `FR-GRAPH-002`: Tamper-Evident Audit Bundle Export
+
 - **User / Principal**: Compliance Officer / Auditor.
 - **Trigger**: Request compliance export for external audit or regulatory filing.
 - **Input**:
@@ -252,17 +265,20 @@ Each requirement specifies: **User / Principal**, **Trigger**, **Input Payload**
 ## 5. Non-Functional Requirements (NFR)
 
 ### 5.1 Security & Tenant Isolation (NFR-SEC)
+
 - **`NFR-SEC-001`: Defense-in-Depth Multi-Tenancy**: Tenant isolation must be enforced both at the application gateway (JWT authentication) and at the database layer (PostgreSQL Row-Level Security). Zero cross-tenant data leaks under any condition.
 - **`NFR-SEC-002`: Authoritative State Guard**: No route handler or API allows an LLM completion or tool result to update status columns in `claims`, `policies`, or `approvals`. Only verified services with validated business rules can transition state.
 - **`NFR-SEC-003`: Untrusted Input Sanitization**: All incoming JSON payloads, external webhooks, and OTel traces must pass through strict Zod schemas before being processed or persisted.
 - **`NFR-SEC-004`: Secret & PII Masking**: PII patterns (email, phone, SSN) and API keys (Bearer tokens, AWS keys) must be automatically redacted from evidence payloads before storage, unless tenant explicitly configures raw retention.
 
 ### 5.2 Performance & Scalability (NFR-PERF)
+
 - **`NFR-PERF-001`: Asynchronous Ingestion Overhead**: Ingestion API endpoint must return HTTP 202 Accepted within **< 10ms** (p95) by offloading processing to internal inbox/queues.
 - **`NFR-PERF-002`: Synchronous Policy Admission Latency**: Synchronous policy evaluation (`/v1/policy/evaluate`) must complete in **< 25ms** (p95) under 500 concurrent requests.
 - **`NFR-PERF-003`: Lineage Traversal Depth**: Lineage DAG queries up to 10 hops deep must return in **< 150ms** (p95) using PostgreSQL recursive CTEs.
 
 ### 5.3 Reliability & Disaster Recovery (NFR-REL)
+
 - **`NFR-REL-001`: At-Least-Once Delivery Resilience**: All background queues and webhook consumers must be idempotent, safely tolerating identical message re-deliveries.
 - **`NFR-REL-002`: Database Rollback Safety**: Every database migration must include an automated, tested `down` migration script. Zero destructive unversioned schema alterations.
 

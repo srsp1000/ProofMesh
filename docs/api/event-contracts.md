@@ -4,7 +4,7 @@
 **Version:** 1.0.0-PROPOSED  
 **Date:** 2026-11-04  
 **Author:** Lead Software Architect and Engineering Orchestrator  
-**Status:** Baselined Architecture Specification  
+**Status:** Baselined Architecture Specification
 
 ---
 
@@ -13,6 +13,7 @@
 All asynchronous domain events, outbox messages, and webhook notifications in ProofMesh adhere to a standardized **Canonical Event Envelope** compliant with the **CNCF CloudEvents v1.0** specification.
 
 ### Core Architectural Guarantees
+
 - **At-Least-Once Delivery**: Consumers must assume events can be delivered multiple times and enforce idempotency using `id` and `idempotencyKey`.
 - **Tenant Context Isolation**: Every event envelope contains an immutable `tenantId` attribute derived exclusively from authenticated server context.
 - **Causality & Tracing**: Every event includes `correlationId` and `causationId` to track causal execution trees across distributed agent boundaries.
@@ -103,6 +104,7 @@ All asynchronous domain events, outbox messages, and webhook notifications in Pr
 ## 3. Typed Domain Event Payloads
 
 ### 3.1 `io.proofmesh.claim.submitted.v1`
+
 Emitted when an agent or client submits a new claim assertion.
 
 ```json
@@ -145,6 +147,7 @@ Emitted when an agent or client submits a new claim assertion.
 ---
 
 ### 3.2 `io.proofmesh.claim.transitioned.v1`
+
 Emitted when a claim transitions between lifecycle states.
 
 ```json
@@ -153,13 +156,7 @@ Emitted when a claim transitions between lifecycle states.
   "$id": "https://proofmesh.io/schemas/v1/events/claim-transitioned.json",
   "title": "ClaimTransitionedV1Payload",
   "type": "object",
-  "required": [
-    "claimVersionId",
-    "fromStatus",
-    "toStatus",
-    "transitionReason",
-    "actorPrincipalId"
-  ],
+  "required": ["claimVersionId", "fromStatus", "toStatus", "transitionReason", "actorPrincipalId"],
   "properties": {
     "claimVersionId": { "type": "string", "format": "uuid" },
     "fromStatus": {
@@ -184,6 +181,7 @@ Emitted when a claim transitions between lifecycle states.
 ---
 
 ### 3.3 `io.proofmesh.evidence.ingested.v1`
+
 Emitted when a raw evidence item is persisted and hashed.
 
 ```json
@@ -204,7 +202,13 @@ Emitted when a raw evidence item is persisted and hashed.
     "evidenceItemId": { "type": "string", "format": "uuid" },
     "evidenceType": {
       "type": "string",
-      "enum": ["runtime_trace", "document_passage", "tool_result", "human_statement", "metric_sample"]
+      "enum": [
+        "runtime_trace",
+        "document_passage",
+        "tool_result",
+        "human_statement",
+        "metric_sample"
+      ]
     },
     "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "byteSize": { "type": "integer", "minimum": 0 },
@@ -219,6 +223,7 @@ Emitted when a raw evidence item is persisted and hashed.
 ---
 
 ### 3.4 `io.proofmesh.evidence.assessed.v1`
+
 Emitted when an evidence item is evaluated against a claim.
 
 ```json
@@ -258,6 +263,7 @@ Emitted when an evidence item is evaluated against a claim.
 ---
 
 ### 3.5 `io.proofmesh.policy.evaluated.v1`
+
 Emitted when a policy disposition is rendered.
 
 ```json
@@ -296,6 +302,7 @@ Emitted when a policy disposition is rendered.
 ---
 
 ### 3.6 `io.proofmesh.review.approved.v1`
+
 Emitted when a human reviewer attests or rejects a case.
 
 ```json
@@ -333,11 +340,13 @@ Emitted when a human reviewer attests or rejects a case.
 ## 4. Schema Evolution, Compatibility & Deprecation Rules
 
 ### 4.1 Backward Compatibility Invariants
+
 1. **Additive Changes Allowed**: Adding optional fields to an event payload or envelope is backward-compatible and does not increment major version.
 2. **Breaking Changes Require New Version**: Removing a field, renaming an existing field, changing a field type, or modifying enum values requires a new major version suffix (`.v2`) and a new schema `$id`.
 3. **Consumer Tolerance**: All consumers must ignore unrecognized fields (`additionalProperties: true` in consumers, `false` in producers).
 
 ### 4.2 Deprecation Lifecycle
+
 1. When a new event version (`v2`) is introduced, the prior version (`v1`) enters **Deprecated** status.
 2. Deprecated event versions continue to be emitted for a mandatory **180-day grace period**.
 3. Monitoring alerts fire if deprecated event consumers are detected 30 days prior to sunset.
