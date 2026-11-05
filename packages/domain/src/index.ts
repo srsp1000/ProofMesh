@@ -1,3 +1,7 @@
 export * from './claims/claim-state-machine.js';
 export * from './evidence/assessment-matrix.js';
 export * from './lineage/dependency-vocabulary.js';
+export * from './identity/tenant-lifecycle.js';
+export * from './auth/rbac.js';
+export * from './audit/merkle-tree.js';
+export * from './security/redaction.js';

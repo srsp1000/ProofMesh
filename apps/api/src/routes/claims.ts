@@ -5,10 +5,27 @@ import {
   createProblemDetails
 } from '@proofmesh/contracts';
 import { ClaimStateMachine, InvalidStateTransitionError } from '@proofmesh/domain';
+import type { AuthMiddlewareDependencies } from '../auth/middleware.js';
+import { createAuthMiddleware } from '../auth/middleware.js';
 
-export const claimRoutes: FastifyPluginAsync = async (fastify) => {
+export const claimRoutes: FastifyPluginAsync<Partial<AuthMiddlewareDependencies>> = async (
+  fastify,
+  options
+) => {
+  const authMiddleware =
+    options.jwtSigner && options.identityRepo && options.authRepo && options.auditRepo
+      ? createAuthMiddleware(options as AuthMiddlewareDependencies)
+      : null;
+
   // Ingestion: submit a claim
   fastify.post('/v1/claims', async (request, reply) => {
+    if (authMiddleware) {
+      await authMiddleware.authenticate(request, reply);
+      if (reply.sent) return;
+      await authMiddleware.requirePermission('claims:submit')(request, reply);
+      if (reply.sent) return;
+    }
+
     const parseResult = SubmitClaimSchema.safeParse(request.body);
     if (!parseResult.success) {
       const problem = createProblemDetails({
@@ -25,21 +42,44 @@ export const claimRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const { claimConceptKey, statement, qualifiers } = parseResult.data;
+    const claimId = crypto.randomUUID();
+    const recordedAt = new Date().toISOString();
+
+    if (authMiddleware && options.auditRepo && request.context) {
+      await options.auditRepo.appendAuditEvent({
+        tenantId: request.context.tenantId,
+        principalId: request.context.principalId,
+        action: 'claim.created',
+        entityType: 'claim',
+        entityId: claimId,
+        payload: {
+          conceptKey: claimConceptKey,
+          statement,
+          qualifiers
+        },
+        correlationId: request.context.correlationId
+      });
+    }
 
     // Return created claim version DTO
     return reply.status(201).send({
-      id: 'd3b07384-d113-46fb-a0e2-df081fc7e8a9',
+      id: claimId,
       conceptKey: claimConceptKey,
       versionSequence: 1,
       statement,
       status: 'submitted',
       qualifiers,
-      recordedAt: new Date().toISOString()
+      recordedAt
     });
   });
 
   // Guarded state transition
   fastify.post('/v1/claims/:id/transition', async (request, reply) => {
+    if (authMiddleware) {
+      await authMiddleware.authenticate(request, reply);
+      if (reply.sent) return;
+    }
+
     const parseResult = TransitionClaimSchema.safeParse(request.body);
     if (!parseResult.success) {
       const problem = createProblemDetails({
@@ -56,13 +96,40 @@ export const claimRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const { targetState, transitionReason } = parseResult.data;
-    // Current simulated state for demonstration
+    const claimVersionId = (request.params as { id: string }).id;
+
+    // Strict Rule: Transition to 'attested' requires 'claims:attest' AND human principal!
+    if (targetState === 'attested' && authMiddleware) {
+      await authMiddleware.requirePermission('claims:attest')(request, reply);
+      if (reply.sent) return;
+      await authMiddleware.requireHumanPrincipal(request, reply);
+      if (reply.sent) return;
+    }
+
+    // Current simulated state
     const currentStatus = 'submitted';
 
     try {
       ClaimStateMachine.validateTransition(currentStatus, targetState);
+
+      if (authMiddleware && options.auditRepo && request.context) {
+        await options.auditRepo.appendAuditEvent({
+          tenantId: request.context.tenantId,
+          principalId: request.context.principalId,
+          action: 'claim.transitioned',
+          entityType: 'claim_version',
+          entityId: claimVersionId,
+          payload: {
+            fromStatus: currentStatus,
+            toStatus: targetState,
+            transitionReason
+          },
+          correlationId: request.context.correlationId
+        });
+      }
+
       return reply.status(200).send({
-        claimVersionId: (request.params as { id: string }).id,
+        claimVersionId,
         fromStatus: currentStatus,
         toStatus: targetState,
         transitionReason,

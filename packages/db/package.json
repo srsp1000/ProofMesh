@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@proofmesh/contracts": "workspace:*",
+    "@proofmesh/domain": "workspace:*",
     "pg": "^8.23.1"
   },
   "devDependencies": {
