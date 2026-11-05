@@ -20,11 +20,7 @@ describe('LangChain Framework Instrumentation Callback', () => {
     const callback = new ProofMeshLangChainCallback(client);
     const runId = '12345678-1234-5678-1234-567812345678';
 
-    callback.handleChainStart(
-      { name: 'RetrievalQAChain' },
-      { query: 'What is ProofMesh?' },
-      runId
-    );
+    callback.handleChainStart({ name: 'RetrievalQAChain' }, { query: 'What is ProofMesh?' }, runId);
 
     callback.handleChainEnd({ output: 'ProofMesh is an AI governance platform' }, runId);
 

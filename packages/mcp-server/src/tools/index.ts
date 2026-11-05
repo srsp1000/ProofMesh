@@ -174,10 +174,7 @@ export const TOOLS: Record<string, ToolHandler> = {
         const dependentClaimId = args.dependentClaimId as string;
         const prerequisiteClaimId = args.prerequisiteClaimId as string;
         const relationshipType = args.relationshipType as
-          | 'supports'
-          | 'refutes'
-          | 'qualifies'
-          | 'presupposes';
+          'supports' | 'refutes' | 'qualifies' | 'presupposes';
         const declarationReason = args.declarationReason as string | undefined;
 
         const dep = await client.dependencies.declare({

@@ -14,3 +14,5 @@ export * from './adapters/webhook.schema.js';
 export * from './adapters/opentelemetry.schema.js';
 export * from './adapters/adapter-health.schema.js';
 export * from './sdk/sdk.schema.js';
+export * from './sources/source.schema.js';
+export * from './claims/claim-intelligence.schema.js';

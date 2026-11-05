@@ -27,6 +27,14 @@ from proofmesh.models import (
     LineageImpactReport,
     SubmitClaimInput,
     TransitionClaimInput,
+    SourceArtifactDTO,
+    SourceVersionDTO,
+    SourcePassageDTO,
+    SourceSnapshotDTO,
+    ClaimExtractionResult,
+    ClaimOccurrenceDTO,
+    ClaimCorrectionDTO,
+    DuplicateConceptCandidate,
 )
 from proofmesh.telemetry import TelemetryBuffer
 
@@ -254,6 +262,88 @@ class ProofMeshClient:
         res = self._request("GET", "/v1/lineage/impact", params={"entityId": entity_id, "entityType": entity_type})
         return LineageImpactReport(**res)
 
+    # 8. Sources
+    def register_source_artifact(self, artifact_data: Dict[str, Any]) -> SourceArtifactDTO:
+        res = self._request("POST", "/v1/sources/artifacts", json_data=artifact_data)
+        return SourceArtifactDTO(**res)
+
+    def get_source_artifact(self, artifact_id: str) -> SourceArtifactDTO:
+        res = self._request("GET", f"/v1/sources/artifacts/{artifact_id}")
+        return SourceArtifactDTO(**res)
+
+    def update_source_retention(self, artifact_id: str, retention_state: str, reason: str) -> SourceArtifactDTO:
+        res = self._request("PATCH", f"/v1/sources/artifacts/{artifact_id}/retention", json_data={"retentionState": retention_state, "reason": reason})
+        return SourceArtifactDTO(**res)
+
+    def create_source_version(self, version_data: Dict[str, Any]) -> SourceVersionDTO:
+        res = self._request("POST", "/v1/sources/versions", json_data=version_data)
+        return SourceVersionDTO(**res)
+
+    def get_source_version(self, version_id: str) -> SourceVersionDTO:
+        res = self._request("GET", f"/v1/sources/versions/{version_id}")
+        return SourceVersionDTO(**res)
+
+    def create_source_passage(self, version_id: str, passage_data: Dict[str, Any]) -> SourcePassageDTO:
+        res = self._request("POST", f"/v1/sources/versions/{version_id}/passages", json_data=passage_data)
+        return SourcePassageDTO(**res)
+
+    def get_source_passages(self, version_id: str) -> List[SourcePassageDTO]:
+        res = self._request("GET", f"/v1/sources/versions/{version_id}/passages")
+        return [SourcePassageDTO(**p) for p in res.get("passages", [])]
+
+    def ingest_file(self, filename: str, content_base64: str, permission_context: str = "internal", original_uri: Optional[str] = None) -> Dict[str, Any]:
+        payload = {
+            "filename": filename,
+            "contentBase64": content_base64,
+            "permissionContext": permission_context,
+            "originalUri": original_uri or f"file://{filename}"
+        }
+        return self._request("POST", "/v1/sources/ingest/file", json_data=payload)
+
+    def ingest_web(self, url: str, permission_context: str = "public", timeout_ms: int = 10000) -> Dict[str, Any]:
+        payload = {
+            "url": url,
+            "permissionContext": permission_context,
+            "timeoutMs": timeout_ms
+        }
+        return self._request("POST", "/v1/sources/ingest/web", json_data=payload)
+
+    def create_source_snapshot(self, version_ids: List[str]) -> SourceSnapshotDTO:
+        res = self._request("POST", "/v1/sources/snapshots", json_data={"sourceVersionIds": version_ids})
+        return SourceSnapshotDTO(**res)
+
+    # 9. Claim Intelligence
+    def extract_propositions(self, extraction_input: Dict[str, Any]) -> ClaimExtractionResult:
+        res = self._request("POST", "/v1/claims/extract", json_data=extraction_input)
+        return ClaimExtractionResult(**res)
+
+    def record_claim_occurrence(self, occurrence_data: Dict[str, Any]) -> ClaimOccurrenceDTO:
+        res = self._request("POST", "/v1/claims/occurrences", json_data=occurrence_data)
+        return ClaimOccurrenceDTO(**res)
+
+    def get_claim_occurrences(self, claim_version_id: str) -> List[ClaimOccurrenceDTO]:
+        res = self._request("GET", f"/v1/claims/{claim_version_id}/occurrences")
+        return [ClaimOccurrenceDTO(**occ) for occ in res.get("occurrences", [])]
+
+    def submit_claim_correction(self, claim_version_id: str, field_name: str, original_value: str, corrected_value: str, reason: str) -> ClaimCorrectionDTO:
+        payload = {
+            "fieldName": field_name,
+            "originalValue": original_value,
+            "correctedValue": corrected_value,
+            "correctionReason": reason
+        }
+        res = self._request("POST", f"/v1/claims/{claim_version_id}/corrections", json_data=payload)
+        return ClaimCorrectionDTO(**res)
+
+    def get_claim_corrections(self, claim_version_id: str) -> List[ClaimCorrectionDTO]:
+        res = self._request("GET", f"/v1/claims/{claim_version_id}/corrections")
+        return [ClaimCorrectionDTO(**c) for c in res.get("corrections", [])]
+
+    def detect_duplicate_concepts(self, proposition: Dict[str, Any], existing_concepts: List[Dict[str, Any]]) -> List[DuplicateConceptCandidate]:
+        payload = {"proposition": proposition, "existingConcepts": existing_concepts}
+        res = self._request("POST", "/v1/claims/concepts/detect-duplicates", json_data=payload)
+        return [DuplicateConceptCandidate(**c) for c in res.get("candidates", [])]
+
     def flush(self) -> None:
         self.telemetry.flush()
 
@@ -480,6 +570,88 @@ class AsyncProofMeshClient:
     ) -> LineageImpactReport:
         res = await self._request("GET", "/v1/lineage/impact", params={"entityId": entity_id, "entityType": entity_type})
         return LineageImpactReport(**res)
+
+    # 8. Sources
+    async def register_source_artifact(self, artifact_data: Dict[str, Any]) -> SourceArtifactDTO:
+        res = await self._request("POST", "/v1/sources/artifacts", json_data=artifact_data)
+        return SourceArtifactDTO(**res)
+
+    async def get_source_artifact(self, artifact_id: str) -> SourceArtifactDTO:
+        res = await self._request("GET", f"/v1/sources/artifacts/{artifact_id}")
+        return SourceArtifactDTO(**res)
+
+    async def update_source_retention(self, artifact_id: str, retention_state: str, reason: str) -> SourceArtifactDTO:
+        res = await self._request("PATCH", f"/v1/sources/artifacts/{artifact_id}/retention", json_data={"retentionState": retention_state, "reason": reason})
+        return SourceArtifactDTO(**res)
+
+    async def create_source_version(self, version_data: Dict[str, Any]) -> SourceVersionDTO:
+        res = await self._request("POST", "/v1/sources/versions", json_data=version_data)
+        return SourceVersionDTO(**res)
+
+    async def get_source_version(self, version_id: str) -> SourceVersionDTO:
+        res = await self._request("GET", f"/v1/sources/versions/{version_id}")
+        return SourceVersionDTO(**res)
+
+    async def create_source_passage(self, version_id: str, passage_data: Dict[str, Any]) -> SourcePassageDTO:
+        res = await self._request("POST", f"/v1/sources/versions/{version_id}/passages", json_data=passage_data)
+        return SourcePassageDTO(**res)
+
+    async def get_source_passages(self, version_id: str) -> List[SourcePassageDTO]:
+        res = await self._request("GET", f"/v1/sources/versions/{version_id}/passages")
+        return [SourcePassageDTO(**p) for p in res.get("passages", [])]
+
+    async def ingest_file(self, filename: str, content_base64: str, permission_context: str = "internal", original_uri: Optional[str] = None) -> Dict[str, Any]:
+        payload = {
+            "filename": filename,
+            "contentBase64": content_base64,
+            "permissionContext": permission_context,
+            "originalUri": original_uri or f"file://{filename}"
+        }
+        return await self._request("POST", "/v1/sources/ingest/file", json_data=payload)
+
+    async def ingest_web(self, url: str, permission_context: str = "public", timeout_ms: int = 10000) -> Dict[str, Any]:
+        payload = {
+            "url": url,
+            "permissionContext": permission_context,
+            "timeoutMs": timeout_ms
+        }
+        return await self._request("POST", "/v1/sources/ingest/web", json_data=payload)
+
+    async def create_source_snapshot(self, version_ids: List[str]) -> SourceSnapshotDTO:
+        res = await self._request("POST", "/v1/sources/snapshots", json_data={"sourceVersionIds": version_ids})
+        return SourceSnapshotDTO(**res)
+
+    # 9. Claim Intelligence
+    async def extract_propositions(self, extraction_input: Dict[str, Any]) -> ClaimExtractionResult:
+        res = await self._request("POST", "/v1/claims/extract", json_data=extraction_input)
+        return ClaimExtractionResult(**res)
+
+    async def record_claim_occurrence(self, occurrence_data: Dict[str, Any]) -> ClaimOccurrenceDTO:
+        res = await self._request("POST", "/v1/claims/occurrences", json_data=occurrence_data)
+        return ClaimOccurrenceDTO(**res)
+
+    async def get_claim_occurrences(self, claim_version_id: str) -> List[ClaimOccurrenceDTO]:
+        res = await self._request("GET", f"/v1/claims/{claim_version_id}/occurrences")
+        return [ClaimOccurrenceDTO(**occ) for occ in res.get("occurrences", [])]
+
+    async def submit_claim_correction(self, claim_version_id: str, field_name: str, original_value: str, corrected_value: str, reason: str) -> ClaimCorrectionDTO:
+        payload = {
+            "fieldName": field_name,
+            "originalValue": original_value,
+            "correctedValue": corrected_value,
+            "correctionReason": reason
+        }
+        res = await self._request("POST", f"/v1/claims/{claim_version_id}/corrections", json_data=payload)
+        return ClaimCorrectionDTO(**res)
+
+    async def get_claim_corrections(self, claim_version_id: str) -> List[ClaimCorrectionDTO]:
+        res = await self._request("GET", f"/v1/claims/{claim_version_id}/corrections")
+        return [ClaimCorrectionDTO(**c) for c in res.get("corrections", [])]
+
+    async def detect_duplicate_concepts(self, proposition: Dict[str, Any], existing_concepts: List[Dict[str, Any]]) -> List[DuplicateConceptCandidate]:
+        payload = {"proposition": proposition, "existingConcepts": existing_concepts}
+        res = await self._request("POST", "/v1/claims/concepts/detect-duplicates", json_data=payload)
+        return [DuplicateConceptCandidate(**c) for c in res.get("candidates", [])]
 
     def flush(self) -> None:
         self.telemetry.flush()

@@ -8,12 +8,16 @@ import { DecisionsModule } from './modules/decisions.js';
 import { AdmissibilityModule } from './modules/admissibility.js';
 import { ReviewsModule } from './modules/reviews.js';
 import { LineageModule } from './modules/lineage.js';
+import { SourcesModule } from './modules/sources.js';
+import { ClaimIntelligenceModule } from './modules/claim-intelligence.js';
 import { WorkflowContextManager } from './context.js';
 import { randomUUID } from 'node:crypto';
 
 export class ProofMeshClient {
   public readonly options: ProofMeshClientOptions;
   public readonly claims: ClaimsModule;
+  public readonly sources: SourcesModule;
+  public readonly claimIntelligence: ClaimIntelligenceModule;
   public readonly contextPackets: ContextPacketsModule;
   public readonly dependencies: DependenciesModule;
   public readonly decisions: DecisionsModule;
@@ -42,6 +46,8 @@ export class ProofMeshClient {
     this.http = new HttpClient(this.options);
     this.telemetry = new TelemetryBuffer(this.options);
     this.claims = new ClaimsModule(this.http);
+    this.sources = new SourcesModule(this.http);
+    this.claimIntelligence = new ClaimIntelligenceModule(this.http);
     this.contextPackets = new ContextPacketsModule(this.http);
     this.dependencies = new DependenciesModule(this.http);
     this.decisions = new DecisionsModule(this.http);

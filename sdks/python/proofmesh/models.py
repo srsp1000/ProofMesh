@@ -200,3 +200,163 @@ class LineageImpactReport(BaseModel):
     affectedDecisions: List[Dict[str, Any]] = Field(default_factory=list)
     affectedClaims: List[Dict[str, Any]] = Field(default_factory=list)
     generatedAt: str
+
+
+# 8. Source Models
+class SourceType(str, Enum):
+    WEB_PAGE = "web_page"
+    PDF = "pdf"
+    DOCX = "docx"
+    MARKDOWN = "markdown"
+    PLAIN_TEXT = "plain_text"
+    CODE_REPOSITORY = "code_repository"
+    API_RESPONSE = "api_response"
+    STRUCTURED_RECORD = "structured_record"
+
+
+class SourceRetentionState(str, Enum):
+    ACTIVE = "active"
+    SOFT_DELETED = "soft_deleted"
+    PURGED = "purged"
+    LEGAL_HOLD = "legal_hold"
+
+
+class SourcePermissionContext(str, Enum):
+    PUBLIC = "public"
+    INTERNAL = "internal"
+    CONFIDENTIAL = "confidential"
+    RESTRICTED = "restricted"
+
+
+class SourceArtifactDTO(BaseModel):
+    id: str
+    tenantId: str
+    projectId: str
+    originalUri: str
+    resolvedUri: str
+    sourceType: SourceType
+    title: str
+    issuer: Optional[str] = None
+    mimeType: str
+    permissionContext: SourcePermissionContext
+    retentionState: SourceRetentionState
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    createdAt: str
+    updatedAt: str
+
+
+class SourceVersionDTO(BaseModel):
+    id: str
+    tenantId: str
+    sourceArtifactId: str
+    versionHash: str
+    byteSize: int
+    storageLocation: str
+    versionIdentifiers: Dict[str, Any] = Field(default_factory=dict)
+    publicationDate: Optional[str] = None
+    retrievalTimestamp: str
+    httpValidators: Optional[Dict[str, Any]] = None
+    extractionStatus: str = "completed"
+    parserMetadata: Dict[str, Any] = Field(default_factory=dict)
+    capturedAt: str
+    recordedAt: str
+
+
+class SourcePassageDTO(BaseModel):
+    id: str
+    tenantId: str
+    sourceVersionId: str
+    passageIndex: int
+    contentText: str
+    contentHash: str
+    charStart: Optional[int] = None
+    charEnd: Optional[int] = None
+    locator: Dict[str, Any]
+    extractionMethod: str
+    ocrConfidence: Optional[float] = None
+    createdAt: str
+
+
+class SourceSnapshotDTO(BaseModel):
+    id: str
+    tenantId: str
+    snapshotHash: str
+    sourceVersionIds: List[str]
+    totalByteSize: int
+    manifest: Dict[str, Any] = Field(default_factory=dict)
+    createdAt: str
+
+
+# 9. Claim Intelligence Models
+class PropositionType(str, Enum):
+    FACTUAL_CLAIM = "factual_claim"
+    OPINION = "opinion"
+    FORECAST = "forecast"
+    COMMITMENT = "commitment"
+    INSTRUCTION = "instruction"
+
+
+class ConfidenceCategory(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class MaterialProposition(BaseModel):
+    id: str
+    propositionType: PropositionType
+    rawStatement: str
+    normalizedSubject: str
+    normalizedPredicate: str
+    normalizedObject: str
+    normalizedUnit: Optional[str] = None
+    qualifiers: Dict[str, Any] = Field(default_factory=dict)
+    sourcePassageId: Optional[str] = None
+    confidenceScore: float
+    confidenceCategory: ConfidenceCategory
+
+
+class ClaimExtractionResult(BaseModel):
+    extractionId: str
+    sourceVersionId: Optional[str] = None
+    propositions: List[MaterialProposition]
+    coverageScore: float
+    rejectedSegments: List[Dict[str, str]] = Field(default_factory=list)
+    modelMetadata: Dict[str, Any] = Field(default_factory=dict)
+    promptTemplateVersion: str
+    extractedAt: str
+
+
+class ClaimOccurrenceDTO(BaseModel):
+    id: str
+    tenantId: str
+    claimVersionId: str
+    sourceVersionId: Optional[str] = None
+    sourcePassageId: Optional[str] = None
+    agentActivityId: Optional[str] = None
+    contextPacketId: Optional[str] = None
+    exactPassageText: str
+    charStart: Optional[int] = None
+    charEnd: Optional[int] = None
+    occurredAt: str
+    recordedAt: str
+
+
+class ClaimCorrectionDTO(BaseModel):
+    id: str
+    tenantId: str
+    claimVersionId: str
+    correctedByPrincipalId: str
+    fieldName: str
+    originalValue: str
+    correctedValue: str
+    correctionReason: str
+    correctedAt: str
+
+
+class DuplicateConceptCandidate(BaseModel):
+    conceptId: str
+    conceptKey: str
+    similarityScore: float
+    scopeDifferences: List[str] = Field(default_factory=list)
+    canMerge: bool

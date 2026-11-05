@@ -8,7 +8,14 @@ import { auditRoutes } from './routes/audit.js';
 import { gatewayRoutes } from './routes/gateway.js';
 import { adapterRoutes } from './routes/adapters.js';
 import { semanticRoutes } from './routes/semantic.js';
+import { sourceRoutes } from './routes/sources.js';
+import { claimIntelligenceRoutes } from './routes/claim-intelligence.js';
 import { createProblemDetails } from '@proofmesh/contracts';
+import type {
+  SourceRegistryService,
+  ClaimIntelligenceService,
+  ClaimCorrectionService
+} from '@proofmesh/domain';
 import {
   type DatabasePool,
   IdentityRepository,
@@ -41,6 +48,9 @@ export interface BuildServerOptions {
   secretManager?: SecretManager;
   webhookSecret?: string;
   maxPayloadBytes?: number;
+  sourceRegistry?: SourceRegistryService;
+  claimIntelligence?: ClaimIntelligenceService;
+  claimCorrections?: ClaimCorrectionService;
   logger?: boolean;
 }
 
@@ -118,6 +128,17 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
 
   await fastify.register(claimRoutes, authDeps ?? {});
   await fastify.register(semanticRoutes, { ...authDeps, gatewayService });
+  await fastify.register(sourceRoutes, {
+    ...authDeps,
+    gatewayService,
+    sourceRegistry: options.sourceRegistry
+  });
+  await fastify.register(claimIntelligenceRoutes, {
+    ...authDeps,
+    gatewayService,
+    claimIntelligence: options.claimIntelligence,
+    claimCorrections: options.claimCorrections
+  });
 
   return fastify;
 }

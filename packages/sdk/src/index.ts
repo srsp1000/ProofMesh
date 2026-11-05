@@ -24,6 +24,13 @@ export {
   getGlobalProofMeshClient
 } from './decorators.js';
 export { ProofMeshLangChainCallback } from './integrations/langchain.js';
+export {
+  SourcesModule,
+  type IngestFileInput,
+  type IngestFileResponse,
+  type IngestWebResponse
+} from './modules/sources.js';
+export { ClaimIntelligenceModule } from './modules/claim-intelligence.js';
 
 // Re-export core contract types and schemas for SDK consumers
 export * from '@proofmesh/contracts';

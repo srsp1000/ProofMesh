@@ -10,3 +10,8 @@ export * from './gateway/privacy-filter.js';
 export * from './events/traffic-lanes.js';
 export * from './events/idempotency.js';
 export * from './security/webhook-signature.js';
+export * from './sources/source-registry.js';
+export * from './sources/safe-parser.js';
+export * from './sources/web-ingestion.js';
+export * from './claims/claim-intelligence.js';
+export * from './claims/claim-corrections.js';
