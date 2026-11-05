@@ -21,7 +21,8 @@ export class RedactionFilter {
       mask: 'Bearer [REDACTED_TOKEN]'
     },
     { name: 'ProofMesh Live Key', regex: /pm_live_[a-zA-Z0-9]{20,}/g, mask: 'pm_live_[REDACTED]' },
-    { name: 'Generic API Key', regex: /sk-[a-zA-Z0-9]{20,}/g, mask: 'sk-[REDACTED]' },
+    { name: 'Generic API Key', regex: /sk-[a-zA-Z0-9_-]{20,}/g, mask: 'sk-[REDACTED]' },
+
     {
       name: 'Private Key Block',
       regex: /-----BEGIN [A-Z ]+PRIVATE KEY-----[^-]+-----END [A-Z ]+PRIVATE KEY-----/gs,

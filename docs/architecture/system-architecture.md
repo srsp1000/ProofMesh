@@ -1,10 +1,10 @@
 # ProofMesh System Architecture Specification
 
 **Document:** `docs/architecture/system-architecture.md`  
-**Version:** 1.0.0-PROPOSED  
-**Date:** 2026-11-04  
-**Author:** Lead Software Architect and Engineering Orchestrator  
-**Status:** Baselined Architecture Specification
+**Version:** 1.1.0-GA  
+**Date:** 2026-11-05  
+**Author:** Lead Software Architect and Integration Engineer  
+**Status:** Phase 4 Implemented & Verified
 
 ---
 
@@ -15,7 +15,9 @@ ProofMesh is architected as an **integration-first, evidence-driven modular mono
 ### Core Architectural Decisions
 
 - **Modularity**: Cohesive domain modules (`claims`, `evidence`, `policy`, `lineage`, `reviews`) communicating via typed in-process interfaces and an internal domain event bus.
-- **Transactional Outbox**: Decouples database mutations from asynchronous event streaming, guaranteeing at-least-once event publication without distributed two-phase commit transactions.
+- **Integration Gateway Boundary**: Protocol-specific adapters (OpenTelemetry, LangChain/MCP callbacks, HTTP webhooks) normalize external data into the CloudEvents 1.0 Canonical Event Envelope. The gateway secures, validates, and routes; domain services own interpretation.
+- **Transactional Inbox/Outbox**: Guarantees atomic, at-least-once message processing. The transactional inbox deduplicates incoming events, leases batches with `FOR UPDATE SKIP LOCKED`, and routes failures to a dead-letter queue with exponential backoff.
+- **Traffic Lane Segregation**: Ingestion isolates `high_priority` governance events (reviews, approvals, claim state transitions) from `bulk_telemetry` streams (trace spans, agent activity), preventing queue starvation.
 - **Strict Trust Isolation**: The public internet and third-party AI agents reside outside the trust perimeter. Ingestion gateways enforce runtime schema validation, authentication, and tenant isolation before payloads reach domain services.
 
 ---
@@ -33,9 +35,11 @@ flowchart TD
 
     subgraph Gateway["Integration Gateway & Boundary Layer"]
         Auth["JWT / API Key Authentication"]
-        TenantCtx["Tenant Context Injection (AsyncLocalStorage)"]
-        ZodVal["Strict Zod Runtime Schema Validation"]
-        Idemp["Idempotent Inbox Deduplication"]
+        TenantCtx["Server-Side Tenant Derivation (AsyncLocalStorage)"]
+        SchemaReg["Event Schema Registry (v1 / Compatibility)"]
+        PrivacyFilt["Privacy Filter (Metadata-Only / Redaction)"]
+        Lanes["Traffic Lane Classifier (High Priority vs Bulk)"]
+        InboxRepo["Transactional Inbox (Deduplication & Leasing)"]
     end
 
     subgraph CoreEngine["ProofMesh Modular Monolith Core"]
@@ -49,14 +53,17 @@ flowchart TD
 
     subgraph StorageLayer["Persistence & Storage Tier"]
         DB[(PostgreSQL 16 Enterprise<br/>Row-Level Security Enabled)]
+        InboxTable[(Transactional Inbox Table)]
         OutboxTable[(Transactional Outbox Table)]
+        DLQTable[(Dead Letter Queue Table)]
         ObjStore[(S3-Compatible Object Store<br/>Immutable Evidence Snapshots)]
     end
 
     subgraph AsyncBus["Asynchronous Event Streaming"]
         OutboxRelay["Outbox Relay Worker"]
-        EventStream["Internal Event Stream<br/>(PostgreSQL LISTEN/NOTIFY or NATS)"]
+        EventStream["Internal Event Transport<br/>(InMemory / NATS JetStream)"]
     end
+
 
     Clients --> Gateway
     Gateway --> CoreEngine

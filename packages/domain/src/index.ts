@@ -5,3 +5,7 @@ export * from './identity/tenant-lifecycle.js';
 export * from './auth/rbac.js';
 export * from './audit/merkle-tree.js';
 export * from './security/redaction.js';
+export * from './gateway/schema-registry.js';
+export * from './gateway/privacy-filter.js';
+export * from './events/traffic-lanes.js';
+export * from './events/idempotency.js';

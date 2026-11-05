@@ -1,4 +1,7 @@
 export * from './events/envelope.js';
+export * from './events/canonical-envelope.schema.js';
+export * from './events/event-families.schema.js';
+export * from './gateway/gateway.schema.js';
 export * from './claims/claim.schema.js';
 export * from './evidence/evidence.schema.js';
 export * from './policy/policy.schema.js';

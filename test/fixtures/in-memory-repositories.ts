@@ -16,8 +16,16 @@ import type {
   AuditEventDTO,
   CreateAuditEventInput,
   AuditCheckpointDTO,
-  AuditQueryFilter
+  AuditQueryFilter,
+  CanonicalEventEnvelope,
+  PriorityLane
 } from '@proofmesh/contracts';
+import type {
+  InboxEventRecord,
+  DeadLetterRecord,
+  InboxLagMetrics,
+  OutboxEventRecord
+} from '../../packages/db/src/index.js';
 import { MerkleTree } from '@proofmesh/domain';
 
 export class InMemoryIdentityRepository {
@@ -428,5 +436,231 @@ export class InMemoryAuditRepository {
 
   async getCheckpoints(tenantId: string): Promise<AuditCheckpointDTO[]> {
     return this.checkpoints.filter((c) => c.tenantId === tenantId);
+  }
+}
+
+export class InMemoryInboxRepository {
+  public records: InboxEventRecord[] = [];
+  public deadLetters: DeadLetterRecord[] = [];
+
+  async insertEvent(
+    tenantId: string,
+    event: CanonicalEventEnvelope,
+    lane: PriorityLane,
+    contentHash: string,
+    idempotencyKey: string
+  ): Promise<{ record: InboxEventRecord; isDuplicate: boolean }> {
+    const existing = this.records.find(
+      (r) =>
+        r.tenantId === tenantId && (r.idempotencyKey === idempotencyKey || r.eventId === event.id)
+    );
+
+    if (existing) {
+      return { record: existing, isDuplicate: true };
+    }
+
+    const record: InboxEventRecord = {
+      id: crypto.randomUUID(),
+      tenantId,
+      eventId: event.id,
+      idempotencyKey,
+      eventType: event.type,
+      priorityLane: lane,
+      status: 'pending',
+      payload: event,
+      contentHash,
+      retryCount: 0,
+      maxRetries: 3,
+      nextRetryAt: new Date().toISOString(),
+      errorDetails: null,
+      processedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    this.records.push(record);
+    return { record, isDuplicate: false };
+  }
+
+  async claimPendingBatch(
+    tenantId: string,
+    lane: PriorityLane,
+    batchSize: number = 10
+  ): Promise<InboxEventRecord[]> {
+    const now = new Date();
+    const batch = this.records
+      .filter(
+        (r) =>
+          r.tenantId === tenantId &&
+          r.priorityLane === lane &&
+          (r.status === 'pending' || r.status === 'failed') &&
+          new Date(r.nextRetryAt) <= now
+      )
+      .slice(0, batchSize);
+
+    for (const r of batch) {
+      r.status = 'processing';
+      r.updatedAt = new Date().toISOString();
+    }
+
+    return batch;
+  }
+
+  async markProcessed(tenantId: string, id: string): Promise<void> {
+    const record = this.records.find((r) => r.tenantId === tenantId && r.id === id);
+    if (record) {
+      record.status = 'processed';
+      record.processedAt = new Date().toISOString();
+      record.updatedAt = new Date().toISOString();
+    }
+  }
+
+  async markFailed(
+    tenantId: string,
+    id: string,
+    error: string,
+    backoffMs: number
+  ): Promise<{ movedToDeadLetter: boolean }> {
+    const record = this.records.find((r) => r.tenantId === tenantId && r.id === id);
+    if (!record) return { movedToDeadLetter: false };
+
+    record.retryCount += 1;
+    record.errorDetails = error;
+    record.updatedAt = new Date().toISOString();
+
+    if (record.retryCount >= record.maxRetries) {
+      record.status = 'dead_letter';
+      const dl: DeadLetterRecord = {
+        id: crypto.randomUUID(),
+        tenantId,
+        inboxEventId: id,
+        eventId: record.eventId,
+        eventType: record.eventType,
+        payload: record.payload,
+        failureReason: error,
+        retryCount: record.retryCount,
+        replayedAt: null,
+        replayedBy: null,
+        createdAt: new Date().toISOString()
+      };
+      this.deadLetters.push(dl);
+      return { movedToDeadLetter: true };
+    }
+
+    record.status = 'failed';
+    record.nextRetryAt = new Date(Date.now() + backoffMs).toISOString();
+    return { movedToDeadLetter: false };
+  }
+
+  async replayDeadLetter(
+    tenantId: string,
+    deadLetterId: string,
+    replayedBy?: string
+  ): Promise<InboxEventRecord | null> {
+    const dl = this.deadLetters.find((d) => d.tenantId === tenantId && d.id === deadLetterId);
+    if (!dl) return null;
+
+    dl.replayedAt = new Date().toISOString();
+    dl.replayedBy = replayedBy ?? null;
+
+    const record = this.records.find((r) => r.tenantId === tenantId && r.id === dl.inboxEventId);
+    if (record) {
+      record.status = 'pending';
+      record.retryCount = 0;
+      record.nextRetryAt = new Date().toISOString();
+      record.errorDetails = 'Manual replay initiated';
+      record.updatedAt = new Date().toISOString();
+      return record;
+    }
+    return null;
+  }
+
+  async getLag(tenantId?: string): Promise<InboxLagMetrics> {
+    const filtered = tenantId ? this.records.filter((r) => r.tenantId === tenantId) : this.records;
+
+    const pending = filtered.filter((r) => r.status === 'pending' || r.status === 'processing');
+    const highPending = pending.filter((r) => r.priorityLane === 'high_priority').length;
+    const bulkPending = pending.filter((r) => r.priorityLane === 'bulk_telemetry').length;
+
+    let oldestSec = 0;
+    if (pending.length > 0) {
+      const oldestTime = Math.min(...pending.map((r) => new Date(r.createdAt).getTime()));
+      oldestSec = Math.max(0, (Date.now() - oldestTime) / 1000);
+    }
+
+    return {
+      highPriorityPending: highPending,
+      bulkTelemetryPending: bulkPending,
+      oldestUnprocessedSec: oldestSec
+    };
+  }
+}
+
+export class InMemoryOutboxRepository {
+  public events: OutboxEventRecord[] = [];
+
+  async appendEvent(
+    tenantId: string,
+    event: CanonicalEventEnvelope,
+    lane: PriorityLane = 'bulk_telemetry'
+  ): Promise<OutboxEventRecord> {
+    const record: OutboxEventRecord = {
+      id: crypto.randomUUID(),
+      tenantId,
+      eventId: event.id,
+      eventType: event.type,
+      priorityLane: lane,
+      status: 'pending',
+      payload: event,
+      retryCount: 0,
+      maxRetries: 5,
+      publishedAt: null,
+      errorDetails: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.events.push(record);
+    return record;
+  }
+
+  async claimPendingBatch(
+    lane: PriorityLane,
+    batchSize: number = 20
+  ): Promise<OutboxEventRecord[]> {
+    const batch = this.events
+      .filter((e) => e.priorityLane === lane && e.status === 'pending')
+      .slice(0, batchSize);
+    return batch;
+  }
+
+  async markPublished(id: string): Promise<void> {
+    const record = this.events.find((e) => e.id === id);
+    if (record) {
+      record.status = 'published';
+      record.publishedAt = new Date().toISOString();
+      record.updatedAt = new Date().toISOString();
+    }
+  }
+
+  async markFailed(id: string, error: string): Promise<void> {
+    const record = this.events.find((e) => e.id === id);
+    if (record) {
+      record.retryCount += 1;
+      record.errorDetails = error;
+      if (record.retryCount >= record.maxRetries) {
+        record.status = 'failed';
+      }
+      record.updatedAt = new Date().toISOString();
+    }
+  }
+
+  async getPendingCount(): Promise<{ highPriority: number; bulkTelemetry: number }> {
+    const high = this.events.filter(
+      (e) => e.priorityLane === 'high_priority' && e.status === 'pending'
+    ).length;
+    const bulk = this.events.filter(
+      (e) => e.priorityLane === 'bulk_telemetry' && e.status === 'pending'
+    ).length;
+    return { highPriority: high, bulkTelemetry: bulk };
   }
 }
